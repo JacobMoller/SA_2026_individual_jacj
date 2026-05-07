@@ -1,5 +1,7 @@
 from pathlib import Path
+import subprocess
 from tempfile import TemporaryDirectory
+from urllib.parse import urlparse
 
 class GitRepositoryReader:
     def __init__(self, repository: str) -> None:
@@ -18,5 +20,28 @@ class GitRepositoryReader:
         self.close()
 
     def _setup_repository(self, repository: str) -> Path:
-        #TODO: clone repo?
-        return "" #TODO: fix repository reading
+        repo_path = Path(repository).expanduser()
+        if repo_path.exists():
+            return repo_path.resolve()
+        
+        if not _looks_like_git_url(repository):
+            raise ValueError(f"Repository path {repository} does not exist.")
+        
+        # Create temp directory
+        self._temp_dir = TemporaryDirectory(prefix="repograph-clone-")
+        target = Path(self._temp_dir.name) / "repo"
+
+
+        # clone to that temp directory
+        subprocess.run(
+            ["git", "clone", "--quiet", repository, str(target)],
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+
+        return target
+    
+def _looks_like_git_url(value: str) -> bool:
+    parsed = urlparse(value)
+    return parsed.scheme in {"http", "https", "ssh", "git"} or value.endswith(".git") # Simple git url-check

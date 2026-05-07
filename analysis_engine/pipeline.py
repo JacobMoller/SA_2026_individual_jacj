@@ -37,8 +37,8 @@ def run_pipeline(options: PipelineOptions) -> PipelineResult:
 
     with GitRepositoryReader(options.repository) as reader:
         for commit in sampler.sample():
-            print(f"Processing commit: {commit}")
-            snapshots.append(ArchitectureSnapshot(commit="test", date=None, message=None, author=None, graph=nx.Graph(), dependencies=[], metrics={}, violations=[], changed_modules=[]))
+            print(f"Processing commit: {commit.msg}")
+            snapshots.append(ArchitectureSnapshot(commit=commit.hash, date=commit.author_date.isoformat(), message=commit.msg.splitlines()[0] if commit.msg else "", author=commit.author.name, graph=nx.Graph(), dependencies=[], metrics={}, violations=[], changed_modules=[]))
 
     store = SnapshotStore(options.output_dir)
     store.write_snapshots(snapshots) # Placeholder for actual snapshots
