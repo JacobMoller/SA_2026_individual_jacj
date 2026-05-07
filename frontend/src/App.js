@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Timeline } from "vis-timeline/standalone";
 import { DataSet } from "vis-data";
 import "vis-timeline/styles/vis-timeline-graph2d.css";
@@ -7,20 +7,26 @@ import SigmaRenderer from "./SigmaRenderer";
 export default function App() {
   const containerRef = useRef(null);
   const timelineRef = useRef(null);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [timeline, setTimeline] = useState({
+    snapshots: [],
+  });
+  const [isLoading, setIsLoading] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = React.useState(true);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // --- Fake git commit data ---
-    const items = new DataSet([
-      { id: 1, content: "Init repo", start: "2019-01-10" },
-      { id: 7, content: "Major refactor", start: "2026-02-18" },
-    ]);
+    const convertToVisFormat = (snapshots) => {
+      return snapshots.map((snapshot) => ({
+        id: snapshot.commit,
+        content: snapshot.message,
+        start: snapshot.date,
+      }));
+    };
 
     const options = {
       stack: true,
+      height: "30vh",
       showCurrentTime: true,
 
       // zooming + scaling behavior
@@ -42,16 +48,43 @@ export default function App() {
       orientation: "bottom",
     };
 
-    timelineRef.current = new Timeline(containerRef.current, items, options);
+    fetch("/snapshots.json")
+      .then((response) => response.json())
+      .then((data) => {
+        setTimeline(data);
 
-    timelineRef.current.setWindow("2019-01-01", "2025-12-31"); //TODO: Set period of first and last commit
+        if (timelineRef.current) {
+          timelineRef.current.destroy();
+        }
 
-    timelineRef.current.on("rangechanged", (props) => {
-      console.log("Selected range:", props.start, props.end);
+        var dataSet = new DataSet(convertToVisFormat(data));
 
-      // TODO: hold state for Sigma graph updating - Select commits closes to selected range?
-      // setTimeRange({ from: props.start, to: props.end });
-    });
+        timelineRef.current = new Timeline(
+          containerRef.current,
+          dataSet,
+          options
+        );
+
+        timelineRef.current.setWindow(
+          dataSet
+            .get()
+            .map((item) => item.start)
+            .sort()[0],
+          new Date()
+        );
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+
+    //timelineRef.current.setWindow("2019-01-01", "2025-12-31"); //TODO: Set period of first and last commit
+
+    //timelineRef.current.on("rangechanged", (props) => {
+    //  console.log("Selected range:", props.start, props.end);
+
+    // TODO: hold state for Sigma graph updating - Select commits closes to selected range?
+    // setTimeRange({ from: props.start, to: props.end });
+    //});
 
     return () => {
       timelineRef.current?.destroy();
@@ -84,8 +117,8 @@ export default function App() {
           style={{
             backgroundColor: "lightskyblue",
             float: "left",
-            height: "100vh",
             padding: "10px",
+            height: "calc(100vh - 20px)",
           }}
         >
           Settings
@@ -102,18 +135,29 @@ export default function App() {
       <div
         style={{ display: "flex", flexDirection: "column", height: "100vh" }}
       >
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, position: "relative" }}>
           <SigmaRenderer />
+          <div
+            style={{
+              position: "absolute",
+              bottom: 0,
+              left: 0,
+              margin: "5px",
+            }}
+          >
+            <button onClick={play}>Play timeline</button>
+          </div>
         </div>
         <div
           style={{
-            borderTop: "1px solid #333",
-            padding: "5px",
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            width: "100%",
+            backgroundColor: "white",
           }}
-        >
-          <button onClick={play}>Play timeline</button>
-        </div>
-        <div ref={containerRef} />
+          ref={containerRef}
+        />
       </div>
     </div>
   );

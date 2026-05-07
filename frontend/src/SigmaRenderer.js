@@ -5,8 +5,9 @@ import { SigmaContainer, useLoadGraph } from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
 
 const sigmaStyle = {
-  height: "85vh",
+  height: "70vh",
   width: "100%",
+  backgroundColor: "#f0f0f0",
 };
 
 // Component that load the graph
