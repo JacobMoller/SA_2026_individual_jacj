@@ -10,9 +10,9 @@ Generate snapshots:
 python -m analysis_engine.cli https://github.com/zeeguu/api
 ```
 
-| Option            | Description                          |
-| ----------------- | ------------------------------------ |
-| `--out`           | Output file path                     |
-| `--every`         | Snapshot interval in commits         |
-| `--max-commits`   | Maximum number of commits to process |
-| `--package-depth` | Package hierarchy depth              |
+| Option            | Description                          | Default Value |
+| ----------------- | ------------------------------------ | ------------- |
+| `--out`           | Output file path                     | snapshots     |
+| `--every`         | Snapshot interval in commits         | 1             |
+| `--max-commits`   | Maximum number of commits to process | None          |
+| `--package-depth` | Package hierarchy depth              | 1             |
