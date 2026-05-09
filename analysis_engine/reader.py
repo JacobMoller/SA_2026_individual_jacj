@@ -19,6 +19,14 @@ class GitRepositoryReader:
     def __exit__(self, *_: object) -> None:
         self.close()
 
+    def python_files_at(self, commit_hash: str) -> dict[str, str]:
+        paths = self._run_git("ls-tree", "-r", "--name-only", commit_hash).splitlines()
+        result: dict[str, str] = {}
+        for path in paths:
+            if path.endswith(".py"):
+                result[path] = self._run_git("show", f"{commit_hash}:{path}")
+        return result
+
     def _setup_repository(self, repository: str) -> Path:
         repo_path = Path(repository).expanduser()
         if repo_path.exists():
@@ -41,6 +49,15 @@ class GitRepositoryReader:
         )
 
         return target
+    
+    def _run_git(self, *args: str) -> str:
+        completed = subprocess.run(
+            ["git", "-C", str(self.path), *args],
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        return completed.stdout
     
 def _looks_like_git_url(value: str) -> bool:
     parsed = urlparse(value)
