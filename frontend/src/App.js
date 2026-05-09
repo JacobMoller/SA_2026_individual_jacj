@@ -10,6 +10,9 @@ export default function App() {
   const [timeline, setTimeline] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = React.useState(true);
+  const [selectedGraph, setSelectedGraph] = useState({
+    graph: { nodes: [], edges: [] },
+  });
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -70,6 +73,24 @@ export default function App() {
             .sort()[0],
           new Date()
         );
+
+        // set specific timeline if item is selected
+        timelineRef.current.on("select", (props) => {
+          console.log("Selected items:", props.items);
+          const selectedTimeline = data.find(
+            (snapshot) => snapshot.commit === props.items[0]
+          );
+          if (selectedTimeline) {
+            setSelectedGraph({
+              graph: {
+                nodes: selectedTimeline.graph.nodes,
+                edges: selectedTimeline.graph.edges,
+              },
+            });
+          } else {
+            setSelectedGraph({ graph: { nodes: [], edges: [] } });
+          }
+        });
       })
       .catch((err) => {
         console.error(err);
@@ -134,7 +155,7 @@ export default function App() {
         style={{ display: "flex", flexDirection: "column", height: "100vh" }}
       >
         <div style={{ flex: 1, position: "relative" }}>
-          <SigmaRenderer graph={timeline[39]?.graph} />
+          <SigmaRenderer graph={selectedGraph.graph} />
           <div
             style={{
               position: "absolute",
