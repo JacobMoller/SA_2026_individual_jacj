@@ -2,6 +2,8 @@
 
 Analyses and Visualizes the evolution of a Python Git repository over time.
 
+![Screenshot](images/screenshot.png)
+
 ## Backend
 
 Generate snapshots:
