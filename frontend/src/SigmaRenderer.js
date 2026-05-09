@@ -11,33 +11,31 @@ const sigmaStyle = {
 };
 
 // Component that load the graph
-export const LoadGraph = () => {
+export const LoadGraph = ({ graphData }) => {
+  console.log("Loading graph with data:", graphData);
   const loadGraph = useLoadGraph();
 
   useEffect(() => {
     const graph = new Graph({ type: "directed" });
 
-    graph.addNode("first", {
-      x: Math.random(),
-      y: Math.random(),
-      size: 15,
-      label: "First",
-      color: "#FA4F40",
+    // Add nodes
+    graphData?.nodes.forEach((node, index) => {
+      graph.addNode(node.id, {
+        x: Math.cos(index) * 10,
+        y: Math.sin(index) * 10,
+        size: 15,
+        label: node.id,
+        color: "#4FA3FA",
+      });
     });
 
-    graph.addNode("second", {
-      x: Math.random(),
-      y: Math.random(),
-      size: 15,
-      label: "Second",
-      color: "#4FA3FA",
-    });
-
-    graph.addEdge("first", "second", {
-      label: "5",
-      labelSize: 100,
-      weight: 15,
-      size: 10,
+    // Add edges
+    graphData?.edges.forEach((edge) => {
+      graph.addEdge(edge.source, edge.target, {
+        label: edge.weight?.toString() || "",
+        weight: edge.weight || 1,
+        size: edge.weight || 1,
+      });
     });
 
     // Layout with ForceAtlas2
@@ -51,12 +49,13 @@ export const LoadGraph = () => {
     });
 
     loadGraph(graph);
-  }, [loadGraph]);
+  }, [graphData?.edges, graphData?.nodes, loadGraph]);
 
   return null;
 };
 
-function SigmaRenderer() {
+function SigmaRenderer({ graph }) {
+  console.log("Rendering Sigma with graph:", graph);
   return (
     <SigmaContainer
       style={sigmaStyle}
@@ -66,7 +65,7 @@ function SigmaRenderer() {
         defaultEdgeType: "arrow",
       }}
     >
-      <LoadGraph />
+      <LoadGraph graphData={graph} />
     </SigmaContainer>
   );
 }

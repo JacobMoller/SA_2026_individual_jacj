@@ -7,9 +7,7 @@ import SigmaRenderer from "./SigmaRenderer";
 export default function App() {
   const containerRef = useRef(null);
   const timelineRef = useRef(null);
-  const [timeline, setTimeline] = useState({
-    snapshots: [],
-  });
+  const [timeline, setTimeline] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = React.useState(true);
 
@@ -136,7 +134,7 @@ export default function App() {
         style={{ display: "flex", flexDirection: "column", height: "100vh" }}
       >
         <div style={{ flex: 1, position: "relative" }}>
-          <SigmaRenderer />
+          <SigmaRenderer graph={timeline[39]?.graph} />
           <div
             style={{
               position: "absolute",
