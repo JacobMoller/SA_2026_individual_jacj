@@ -15,6 +15,7 @@ class DependencyEdge:
     source: str
     target: str
     import_name: str
+    source_file: str
 
 class DependencyExtractor:
     def __init__(self, package_depth: int = 1) -> None:
@@ -25,11 +26,14 @@ class DependencyExtractor:
     def python_file(self, path: str, source: str) -> PythonFile | None:
         module = module_name_from_file_path(path)
         if module:
+            unit = unit_from_module(module, self.package_depth)
+            if not unit:
+                return None
             return PythonFile(
                 path=path,
                 source=source,
                 module=module,
-                unit=unit_from_module(module, self.package_depth),
+                unit=unit,
             )
         return None 
     
@@ -54,6 +58,7 @@ class DependencyExtractor:
                             source=file.unit,
                             target=target_unit,
                             import_name=import_name,
+                            source_file=file.path,
                         )
                     )
 
@@ -120,4 +125,11 @@ def module_name_from_file_path(full_path):
 
 # Converts a module name to unit based on depth
 def unit_from_module(module: str, depth: int = 1) -> str:
-    return ".".join(module.split(".")[:depth])
+    parts = module.split(".")
+    if parts[0] == "zeeguu":
+        parts = parts[1:]
+    if not parts:
+        return ""
+    if parts[0].startswith("zeeguu_"):
+        parts[0] = parts[0].removeprefix("zeeguu_")
+    return ".".join(parts[:depth])
