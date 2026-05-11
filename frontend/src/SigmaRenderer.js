@@ -1,7 +1,11 @@
 import { useEffect } from "react";
 import Graph from "graphology";
 import forceAtlas2 from "graphology-layout-forceatlas2";
-import { SigmaContainer, useLoadGraph } from "@react-sigma/core";
+import {
+  SigmaContainer,
+  useLoadGraph,
+  useRegisterEvents,
+} from "@react-sigma/core";
 import "@react-sigma/core/lib/style.css";
 
 const sigmaStyle = {
@@ -14,9 +18,21 @@ const sigmaStyle = {
 export const LoadGraph = ({ graphData }) => {
   console.log("Loading graph with data:", graphData);
   const loadGraph = useLoadGraph();
+  const registerEvents = useRegisterEvents();
 
   useEffect(() => {
     const graph = new Graph({ type: "directed" });
+
+    registerEvents({
+      // node events
+      clickNode: (event) =>
+        console.log(
+          "clickNode",
+          event.event,
+          event.node,
+          event.preventSigmaDefault
+        ),
+    });
 
     // Add nodes
     graphData?.nodes.forEach((node, index) => {
