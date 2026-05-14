@@ -36,3 +36,206 @@
     transform: rotate(360deg);
   }
 }
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.settings-panel {
+  background: #f8fafc;
+  border-right: 1px solid #dbe3ec;
+  box-sizing: border-box;
+  color: #172033;
+  flex: 0 0 320px;
+  height: 100vh;
+  overflow: auto;
+  padding: 14px;
+}
+
+.settings-header,
+.setting-row,
+.change-totals {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.settings-header button,
+.module-button,
+.context-button,
+.graph-column button {
+  background: #ffffff;
+  border: 1px solid #b8c4d4;
+  border-radius: 6px;
+  color: #172033;
+  cursor: pointer;
+  padding: 6px 9px;
+}
+
+.setting-row {
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 12px;
+}
+
+.settings-input,
+.settings-textarea {
+  background: #ffffff;
+  border: 1px solid #b8c4d4;
+  border-radius: 6px;
+  box-sizing: border-box;
+  color: #172033;
+  font: inherit;
+  margin-top: 6px;
+  padding: 7px 8px;
+  width: 100%;
+}
+
+.settings-textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.settings-section {
+  border-top: 1px solid #dbe3ec;
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.module-buttons,
+.change-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.module-button {
+  text-align: left;
+}
+
+.context-button {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.module-button.hidden {
+  background: #e7f5ff;
+  border-color: #74c0fc;
+}
+
+.hidden-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.graph-column {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  height: 100vh;
+  min-width: 0;
+}
+
+.commit-meta {
+  color: #4a5568;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.change-totals {
+  justify-content: flex-start;
+  margin-top: 8px;
+}
+
+.change-totals span {
+  background: #edf2f7;
+  border-radius: 6px;
+  font-size: 12px;
+  padding: 4px 7px;
+}
+
+.change-item {
+  background: #ffffff;
+  border: 1px solid #dbe3ec;
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+}
+
+.change-item span {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.change-item small,
+.settings-section small {
+  color: #667085;
+}
+
+.module-change {
+  background: #ffffff;
+  border: 1px solid #dbe3ec;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.rule-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.rule-item {
+  background: #ffffff;
+  border: 1px solid #dbe3ec;
+  border-radius: 6px;
+  padding: 8px;
+}
+
+.rule-item summary {
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+}
+
+.rule-item summary span {
+  font-weight: 700;
+}
+
+.violation-count {
+  color: #c92a2a;
+}
+
+.ok-count {
+  color: #2f9e44;
+}
+
+.module-change summary {
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+}
+
+.module-change summary span {
+  font-weight: 700;
+}
+
+.change-list.nested {
+  margin-top: 8px;
+}
+
+code {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
