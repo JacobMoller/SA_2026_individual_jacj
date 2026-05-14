@@ -455,7 +455,9 @@ export default function App() {
   const [hiddenModules, setHiddenModules] = useState([]);
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedEdge, setSelectedEdge] = useState(null);
-  const [componentFilter, setComponentFilter] = useState("");
+  const [componentFilter, setComponentFilter] = useState(
+    "api, ci, config, core, logging, operations"
+  );
   const [ruleConfig, setRuleConfig] = useState({
     layerRule: defaultLayerRule,
     forbiddenDependencies: defaultForbiddenDependencies,
