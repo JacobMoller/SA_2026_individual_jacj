@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import Graph from "graphology";
 import forceAtlas2 from "graphology-layout-forceatlas2";
 import {
@@ -7,8 +7,8 @@ import {
   useRegisterEvents,
   useSigma,
 } from "@react-sigma/core";
+import { EdgeDoubleArrowProgram } from "sigma/rendering";
 import "@react-sigma/core/lib/style.css";
-import { useRef } from "react";
 
 const sigmaStyle = {
   height: "70vh",
@@ -30,8 +30,10 @@ const edgeColors = {
   unchanged: "#6c757d",
 };
 
-function hasReverseEdge(edge, allEdges) {
-  return allEdges.some(
+function reverseEdge(edge, allEdges) {
+  if (edge.source === edge.target) return undefined;
+
+  return allEdges.find(
     (candidate) =>
       candidate.source === edge.target &&
       candidate.target === edge.source &&
@@ -39,29 +41,23 @@ function hasReverseEdge(edge, allEdges) {
   );
 }
 
-function reciprocalAnchor(edge, graph, index) {
-  const source = graph.getNodeAttributes(edge.source);
-  const target = graph.getNodeAttributes(edge.target);
-  const dx = target.x - source.x;
-  const dy = target.y - source.y;
-  const length = Math.hypot(dx, dy) || 1;
-  const direction = edge.source < edge.target ? 1 : -1;
-  const offset = 1.6 * direction;
-
-  return {
-    id: `anchor:${edge.source}:${edge.target}:${index}`,
-    x: (source.x + target.x) / 2 + (-dy / length) * offset,
-    y: (source.y + target.y) / 2 + (dx / length) * offset,
-  };
+function reciprocalKey(edge) {
+  const [a, b] = [edge.source, edge.target].sort();
+  return `${edge.implicit ? "implicit" : "dependency"}:${a}<->${b}`;
 }
 
-function edgeVisualAttributes(edge, label = edge.weight?.toString() || "") {
+function edgeVisualAttributes(
+  edge,
+  label = edge.weight?.toString() || "",
+  type
+) {
   return {
     ...edge,
     label,
     weight: edge.weight || 1,
     size: Math.max(1, Math.min(edge.weight || 1, 8)),
     color: edgeColors[edge.changeStatus] || edgeColors.unchanged,
+    ...(type ? { type } : {}),
   };
 }
 
@@ -96,11 +92,27 @@ export const LoadGraph = ({
   const loadGraph = useLoadGraph();
   const registerEvents = useRegisterEvents();
   const positionsRef = useRef({});
-  const draggedNodeRef = useRef(null);
   const layoutEditActiveRef = useRef(false);
+  const dragRef = useRef({
+    node: null,
+    hasMoved: false,
+    restoreCameraPanning: true,
+  });
+
+  const endNodeDrag = useCallback(() => {
+    if (!dragRef.current.node) return;
+
+    sigma.setSetting(
+      "enableCameraPanning",
+      dragRef.current.restoreCameraPanning
+    );
+    dragRef.current.node = null;
+    dragRef.current.restoreCameraPanning = true;
+  }, [sigma]);
 
   useEffect(() => {
-    const isLayoutEditKey = (event) => event.key === layoutEditKey;
+    const isLayoutEditKey = (event) =>
+      event.key === layoutEditKey || event.code === layoutEditKey;
     const handleKeyDown = (event) => {
       if (isLayoutEditKey(event)) {
         layoutEditActiveRef.current = true;
@@ -109,8 +121,7 @@ export const LoadGraph = ({
     const handleKeyUp = (event) => {
       if (isLayoutEditKey(event)) {
         layoutEditActiveRef.current = false;
-        draggedNodeRef.current = null;
-        sigma.getMouseCaptor().enabled = true;
+        endNodeDrag();
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -119,7 +130,7 @@ export const LoadGraph = ({
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [layoutEditKey, sigma]);
+  }, [endNodeDrag, layoutEditKey]);
 
   useEffect(() => {
     const graph = new Graph({ type: "directed" });
@@ -131,20 +142,28 @@ export const LoadGraph = ({
       downNode: (event) => {
         const original = event.event.original;
 
-        if (!original.shiftKey) return;
+        if (!original?.shiftKey && !layoutEditActiveRef.current) return;
 
         const node = graph.getNodeAttributes(event.node);
 
         if (node.isAnchor) return;
 
-        draggedNodeRef.current = event.node;
-
-        sigma.getMouseCaptor().enabled = false;
+        dragRef.current.node = event.node;
+        dragRef.current.hasMoved = false;
+        dragRef.current.restoreCameraPanning = sigma.getSetting(
+          "enableCameraPanning"
+        );
+        sigma.setSetting("enableCameraPanning", false);
 
         event.preventSigmaDefault();
-        original.preventDefault();
+        original?.preventDefault();
       },
       clickNode: (event) => {
+        if (dragRef.current.hasMoved) {
+          dragRef.current.hasMoved = false;
+          return;
+        }
+
         const node = graph.getNodeAttributes(event.node);
         if (!node.isAnchor) {
           onNodeClick?.({ id: event.node, ...node });
@@ -155,17 +174,18 @@ export const LoadGraph = ({
         onEdgeClick?.(edge);
       },
       mousemovebody: (event) => {
-        if (!draggedNodeRef.current) return;
+        if (!dragRef.current.node) return;
+        event.preventSigmaDefault();
+        event.original?.preventDefault();
         const position = sigma.viewportToGraph(event);
-        graph.setNodeAttribute(draggedNodeRef.current, "x", position.x);
-        graph.setNodeAttribute(draggedNodeRef.current, "y", position.y);
-        positionsRef.current[draggedNodeRef.current] = position;
+        graph.setNodeAttribute(dragRef.current.node, "x", position.x);
+        graph.setNodeAttribute(dragRef.current.node, "y", position.y);
+        positionsRef.current[dragRef.current.node] = position;
+        dragRef.current.hasMoved = true;
         sigma.scheduleRender();
       },
       mouseup: () => {
-        if (!draggedNodeRef.current) return;
-        draggedNodeRef.current = null;
-        sigma.getMouseCaptor().enabled = true;
+        endNodeDrag();
       },
     });
 
@@ -187,19 +207,44 @@ export const LoadGraph = ({
       });
     });
 
-    // Add edges
+    // Add edges. Reciprocal dependencies render as one double-arrow edge.
+    const processedReciprocalEdges = new Set();
     graphData?.edges.forEach((edge) => {
-      const key = edge.implicit
-        ? [edge.source, edge.target].sort().join("--")
-        : `${edge.source}->${edge.target}`;
-      if (!hasReverseEdge(edge, graphData?.edges || [])) {
+      const allEdges = graphData?.edges || [];
+      const reciprocal = reverseEdge(edge, allEdges);
+
+      if (reciprocal) {
+        const key = reciprocalKey(edge);
+        if (processedReciprocalEdges.has(key)) return;
+
+        processedReciprocalEdges.add(key);
         graph.addDirectedEdgeWithKey(
           key,
           edge.source,
           edge.target,
-          edgeVisualAttributes(edge)
+          edgeVisualAttributes(
+            {
+              ...edge,
+              reciprocalEdges: [edge, reciprocal],
+              isBidirectional: true,
+              weight: Math.max(edge.weight || 1, reciprocal.weight || 1),
+            },
+            `${edge.weight || 1}/${reciprocal.weight || 1}`,
+            "doubleArrow"
+          )
         );
+        return;
       }
+
+      const key = edge.implicit
+        ? [edge.source, edge.target].sort().join("--")
+        : `${edge.source}->${edge.target}`;
+      graph.addDirectedEdgeWithKey(
+        key,
+        edge.source,
+        edge.target,
+        edgeVisualAttributes(edge)
+      );
     });
 
     if (
@@ -223,36 +268,6 @@ export const LoadGraph = ({
       }
     });
 
-    graphData?.edges.forEach((edge, index) => {
-      if (!hasReverseEdge(edge, graphData?.edges || [])) return;
-
-      const anchor = reciprocalAnchor(edge, graph, index);
-      graph.addNode(anchor.id, {
-        x: anchor.x,
-        y: anchor.y,
-        size: 0.01,
-        label: "",
-        color: "rgba(0, 0, 0, 0)",
-        isAnchor: true,
-      });
-
-      const key = edge.implicit
-        ? [edge.source, edge.target].sort().join("--")
-        : `${edge.source}->${edge.target}`;
-      const attrs = edgeVisualAttributes(edge);
-      graph.addDirectedEdgeWithKey(`${key}:lead`, edge.source, anchor.id, {
-        ...attrs,
-        label: "",
-        type: "line",
-      });
-      graph.addDirectedEdgeWithKey(
-        `${key}:arrow`,
-        anchor.id,
-        edge.target,
-        attrs
-      );
-    });
-
     loadGraph(graph);
   }, [
     graphData?.edges,
@@ -262,6 +277,7 @@ export const LoadGraph = ({
     onNodeClick,
     registerEvents,
     sigma,
+    endNodeDrag,
   ]);
 
   return null;
@@ -281,6 +297,9 @@ function SigmaRenderer({
         renderEdgeLabels: true,
         enableEdgeEvents: true,
         defaultEdgeType: "arrow",
+        edgeProgramClasses: {
+          doubleArrow: EdgeDoubleArrowProgram,
+        },
       }}
     >
       <LoadGraph
