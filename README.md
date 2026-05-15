@@ -2,7 +2,7 @@
 
 Analyses and Visualizes the evolution of a Python Git repository over time.
 
-![Screenshot](images/screenshot.jpeg)
+![Screenshot](images/screenshot.jpeg?)
 
 ## Backend
 
